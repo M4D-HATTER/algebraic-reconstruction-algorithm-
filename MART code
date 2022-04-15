@@ -1,0 +1,57 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas
+"""Initial intensity of light through air"""
+I = 1403
+"""total amount of possible paths"""
+L = 8
+"""amount of pixels affected by one path length"""
+n = 4
+"""length of each pixel in meters"""
+l = 0.004
+"""Relaxation coeficient"""
+Lambda = 0.1
+"""importing scan data from excel file"""
+csvfile = pandas.read_csv(r"D:\Uni yr3\Tomog\1.csv")
+data = np.array(csvfile)
+"""splitting scan data into two matricies for x and y scann directions"""
+xdata = data[0:n,0]
+xdata = np.reshape(xdata,(n,1))
+ydata = data[n:L,0]
+ydata = np.reshape(ydata,(n,1))
+"""using the beer-lambert law to get the attenuation in each pixel"""
+Lxdata = np.log(I/xdata)
+Lydata = np.log(I/ydata)
+"""calculating the average attenuation as a starting point for the reconstruction"""
+Avg = np.sum(Lxdata + Lydata)/(L * n)
+Avg = Avg/l
+"""Initial matrix of ones to provide a matrix to be updated for each iteration """
+x = np.ones((n,n))
+"""filling the matrix with initial average attenuation"""
+Ax = x * Avg
+x = Ax
+"""loop in ordere to project data across the average attenuation values """
+for i in range(50):   
+    """suming the matrix in the y direction in order to subtract from measured data"""
+    b = np.sum(x,axis=1)
+    b = np.reshape(b,(n,1))
+    """preforming the equation of projecting data and updating the matrix x"""
+    x = x * ((Lydata/(b))**(Lambda*n))
+    """rotating the matrix clockwise by 270 degrees in order to preform the calculations in the x direction """
+    x = np.rot90(x)
+    x = np.rot90(x)
+    x = np.rot90(x)
+    """suming the matrix in the x direction in order to subtract from measured data"""
+    c = np.sum(x, axis = 1)
+    c = np.reshape(c,(n,1))
+    """preforming the equation of projecting data and updating the matrix x"""
+    x = x * ((Lxdata/(c))**(Lambda*n))
+    """rotating the matrix by 90 degrees in order to get it back in the original orientation"""
+    x = np.rot90(x)
+    
+"""ploting the image with a grey colourmap and number of iterations """
+fig, ax = plt.subplots(constrained_layout=True)
+ax.set_title('Iteration')
+secax = ax.secondary_xaxis('top')
+secax.set_xlabel(i + 1)
+plt.imshow(x,cmap = 'Greys')
